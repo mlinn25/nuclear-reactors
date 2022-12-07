@@ -1,33 +1,64 @@
 ---
-title: "Activity: Nuclear Reactors"
-author: "YOUR NAME HERE"
-output: html_notebook
+title: 'Activity: Nuclear Reactors'
+author: "Maggie Linn"
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r}
 library(tidyverse)
-
+library(rvest)
+library(lubridate)
 ```
 
 ## Scrape the Data 
 
 ```{r}
 #My code here.... 
+page <- "http://en.wikipedia.org/wiki/List_of_nuclear_reactors"
+tableList <- page %>%
+  read_html() %>%
+  html_nodes(css = "table") %>%
+  html_table(fill = TRUE)
 
+tableList[[21]]
+
+Japan <- tableList[[21]]
+
+names(Japan)[c(3,4)] <- c("type", "model")
+
+Japan <-
+  Japan %>%
+  filter(row_number() > 1) %>%
+  rename(name = Name, 
+         reactor = `UnitNo.`,
+         status = Status, 
+         netMW = `Net capacity (MW)`,
+         construction = `Construction start`,
+         operation = `Commercial operation`, 
+         closure = Closure) %>%
+  mutate(construction = lubridate::dmy(construction), 
+         operation = lubridate::dmy(operation),
+         closure = lubridate::dmy(closure))
+
+Japan$country <- c('Japan')
 
 ```
 
 
 ## Your turn: In what ways is the table tidy? How is it not tidy? What’s different about it from a tidy table?
 
-My answer here..... 
+The table is tidy because each row is an observation, each column is a variable, the column headers are not values, and more. It is not tidy by the dates, so we have to change the dates so they are tidy. This is different from a tidy table because of the dates, which we are mutating.
 
 
 ## Your Turn: Plot Net Generation Capacity vs Construction Date
 
 ```{r}
-#my code here 
 
+Japan %>%
+  ggplot(aes(x=construction, y=netMW, color=type)) +
+  geom_point()
 
 ```
 
@@ -35,7 +66,32 @@ My answer here.....
 ## Your Turn: Scrape & Clean China Data (then merge with Japan)
 
 ```{r}
-#my code here... 
+
+tableList[[10]]
+
+China <- tableList[[10]]
+
+names(China)[c(3,4)] <- c("type", "model")
+
+China <-
+  China %>%
+  filter(row_number() > 1) %>%
+  rename(name = Name, 
+         reactor = `UnitNo.`,
+         status = Status, 
+         netMW = `Net capacity (MW)`,
+         construction = `Construction start`,
+         operation = `Commercial operation`, 
+         closure = Closure) %>%
+  mutate(construction = lubridate::dmy(construction), 
+         operation = lubridate::dmy(operation),
+         closure = lubridate::dmy(closure))
+
+China$country <- c('China')
+
+ChinaJapan <-
+  China %>%
+  full_join(Japan)
 
 ```
 
@@ -44,6 +100,8 @@ My answer here.....
 ## Your Turn: Reconstruct Info Graphic of Japan Reactors (or other country of interest)
 
 ```{r}
-#My code here
 
+ChinaJapan %>%
+  ggplot(aes(x=operation, y=name, color=type, points=status)) +
+  geom_segment(aes(xend=2022, yend='Zhangzhou'))
 ```
